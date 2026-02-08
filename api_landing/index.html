@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDGAR Intelligence API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --bg-elevated: #161514;
+            --bg-card: #1a1918;
+            --bg-code: #121110;
+            --text: #f5f0e8;
+            --text-secondary: #a8a295;
+            --text-muted: #6b665c;
+            --accent: #d4a853;
+            --accent-dim: #9c7a3c;
+            --accent-glow: rgba(212, 168, 83, 0.08);
+            --accent-glow-strong: rgba(212, 168, 83, 0.15);
+            --border: #333230;
+            --border-light: #2a2826;
+            --green: #5cb85c;
+            --red: #c0392b;
+            --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+            --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            font-size: 16px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Noise texture */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.025;
+            z-index: 9999;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* Utility */
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        /* ─── NAV ─── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px) saturate(120%);
+            -webkit-backdrop-filter: blur(16px) saturate(120%);
+            background: rgba(15, 15, 15, 0.85);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        nav .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .nav-mark {
+            width: 24px;
+            height: 24px;
+            color: var(--accent);
+        }
+
+        .nav-title {
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .nav-links a {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            transition: color 200ms;
+        }
+
+        .nav-links a:hover { color: var(--accent); }
+
+        .nav-cta {
+            font-family: var(--font-mono) !important;
+            font-size: 0.6875rem !important;
+            padding: 6px 16px;
+            border: 1px solid var(--accent-dim);
+            border-radius: 4px;
+            color: var(--accent) !important;
+            transition: all 200ms;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-glow-strong);
+            border-color: var(--accent);
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            padding: 160px 0 80px;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent);
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeUp 600ms 100ms forwards;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 500;
+            line-height: 1.1;
+            color: var(--text);
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeUp 600ms 200ms forwards;
+        }
+
+        .hero h1 em {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        .hero-sub {
+            font-size: 1.0625rem;
+            color: var(--text-secondary);
+            max-width: 520px;
+            line-height: 1.7;
+            margin-bottom: 48px;
+            opacity: 0;
+            animation: fadeUp 600ms 300ms forwards;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Terminal block */
+        .terminal {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 680px;
+            opacity: 0;
+            animation: fadeUp 600ms 400ms forwards;
+        }
+
+        .terminal-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .terminal-bar-label {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .terminal-body {
+            padding: 20px 24px;
+            overflow-x: auto;
+        }
+
+        .terminal-body pre {
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            white-space: pre;
+            margin: 0;
+        }
+
+        .terminal-body .cmd { color: var(--text-muted); }
+        .terminal-body .str { color: var(--accent); }
+        .terminal-body .key { color: #8fa8bf; }
+        .terminal-body .val { color: #c3d4a5; }
+        .terminal-body .num { color: #d4a0a0; }
+        .terminal-body .comment { color: #4a4740; }
+
+        /* ─── SECTION ─── */
+        section {
+            padding: 80px 0;
+        }
+
+        .section-rule {
+            width: 100%;
+            height: 1px;
+            background: var(--border-light);
+            border: none;
+        }
+
+        .section-label {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .section-heading {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 48px;
+            line-height: 1.2;
+        }
+
+        /* ─── FEATURES ─── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background: var(--border-light);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .feature {
+            padding: 36px 32px;
+            background: var(--bg);
+            transition: background 300ms;
+        }
+
+        .feature:hover {
+            background: var(--bg-elevated);
+        }
+
+        .feature-num {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            color: var(--accent-dim);
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+
+        .feature h3 {
+            font-family: var(--font-display);
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ─── CODE EXAMPLES ─── */
+        .code-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0;
+        }
+
+        .code-tab {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-bottom: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 150ms;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-tab:first-child { border-radius: 8px 0 0 0; }
+        .code-tab:last-child { border-radius: 0 8px 0 0; }
+
+        .code-tab.active {
+            background: var(--bg-code);
+            color: var(--accent);
+            border-color: var(--border);
+        }
+
+        .code-panel {
+            display: none;
+        }
+
+        .code-panel.active {
+            display: block;
+        }
+
+        .code-panel .terminal {
+            border-radius: 0 8px 8px 8px;
+            opacity: 1;
+            animation: none;
+        }
+
+        /* ─── ENDPOINTS ─── */
+        .endpoints-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .endpoints-table th {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .endpoints-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+
+        .endpoints-table tr:last-child td { border-bottom: none; }
+        .endpoints-table tr:hover td { background: var(--bg-elevated); }
+
+        .method {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 3px;
+            letter-spacing: 0.03em;
+        }
+
+        .method-post {
+            color: #c3d4a5;
+            background: rgba(195, 212, 165, 0.1);
+        }
+
+        .method-get {
+            color: #8fa8bf;
+            background: rgba(143, 168, 191, 0.1);
+        }
+
+        .endpoint-path {
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            color: var(--text);
+        }
+
+        .endpoint-desc {
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            font-family: var(--font-mono);
+            font-size: 0.5625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+
+        .badge-auth {
+            color: var(--accent);
+            background: var(--accent-glow-strong);
+        }
+
+        .badge-public {
+            color: var(--green);
+            background: rgba(92, 184, 92, 0.1);
+        }
+
+        /* ─── PRICING ─── */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .price-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 40px 36px;
+            background: var(--bg);
+            transition: border-color 300ms, background 300ms;
+            position: relative;
+        }
+
+        .price-card:hover {
+            border-color: var(--border-light);
+            background: var(--bg-elevated);
+        }
+
+        .price-card.featured {
+            border-color: var(--accent-dim);
+            background: var(--bg-elevated);
+        }
+
+        .price-card.featured::before {
+            content: 'RECOMMENDED';
+            position: absolute;
+            top: -9px;
+            left: 24px;
+            font-family: var(--font-mono);
+            font-size: 0.5625rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: var(--bg);
+            background: var(--accent);
+            padding: 2px 10px;
+            border-radius: 3px;
+        }
+
+        .price-tier {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .price-amount {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .price-period {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+        }
+
+        .price-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .price-features li {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .price-features li::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: var(--accent-dim);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .coming-soon {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-dim);
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        /* ─── CTA ─── */
+        .cta-section {
+            text-align: center;
+            padding: 100px 0;
+        }
+
+        .cta-section h2 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .cta-section p {
+            color: var(--text-secondary);
+            margin-bottom: 36px;
+            font-size: 1rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--bg);
+            background: var(--accent);
+            padding: 14px 40px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 200ms;
+        }
+
+        .cta-button:hover {
+            background: var(--accent-dim);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 24px var(--accent-glow-strong);
+        }
+
+        /* ─── FOOTER ─── */
+        footer {
+            border-top: 1px solid var(--border-light);
+            padding: 32px 0;
+        }
+
+        footer .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-tech {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 200ms;
+        }
+
+        .footer-links a:hover { color: var(--accent); }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            .container { padding: 0 20px; }
+            .hero { padding: 120px 0 60px; }
+            .hero h1 { font-size: 2rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+            .endpoints-table { font-size: 0.8125rem; }
+            .endpoints-table th,
+            .endpoints-table td { padding: 12px 14px; }
+            footer .container { flex-direction: column; gap: 16px; text-align: center; }
+        }
+
+        /* ─── SELECTION ─── */
+        ::selection {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* Response example */
+        .response-block {
+            margin-top: 16px;
+        }
+
+        .response-label {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="nav-brand">
+                <svg class="nav-mark" viewBox="0 0 32 32" fill="none">
+                    <rect x="2" y="2" width="12" height="12" stroke="currentColor" stroke-width="2"/>
+                    <rect x="18" y="2" width="12" height="12" fill="currentColor"/>
+                    <rect x="2" y="18" width="12" height="12" fill="currentColor"/>
+                    <rect x="18" y="18" width="12" height="12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span class="nav-title">EDGAR Intelligence</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#quickstart">Docs</a>
+                <a href="#pricing">Pricing</a>
+                <a href="https://github.com/amirhshad/edgar-intelligence" target="_blank">GitHub</a>
+                <a href="mailto:amirhshad@gmail.com" class="nav-cta">Get API Key</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-eyebrow">Developer API &mdash; v1.0</div>
+            <h1>SEC Filing Research,<br><em>Programmatic</em></h1>
+            <p class="hero-sub">Ask natural language questions about 10-K and 10-Q filings. Receive AI-generated answers with citations to specific filing sections. One API call.</p>
+
+            <div class="terminal">
+                <div class="terminal-bar">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-bar-label">Terminal</span>
+                </div>
+                <div class="terminal-body">
+<pre><span class="cmd">$</span> curl -X POST https://api.edgarintel.com/v1/query \
+  -H <span class="str">"Authorization: Bearer sk_edgar_live_..."</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "question": "What was Apple total revenue in fiscal 2024?"
+  }'</span>
+
+<span class="comment">// Response</span>
+{
+  <span class="key">"answer"</span>: <span class="str">"Total net revenue was $391.0 billion for fiscal 2024..."</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.92</span>,
+  <span class="key">"citations"</span>: [{ <span class="key">"section"</span>: <span class="str">"Item 7 - MD&amp;A"</span>, ... }]
+}</pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><hr class="section-rule"></div>
+
+    <!-- Features -->
+    <section id="features">
+        <div class="container">
+            <div class="section-label">Capabilities</div>
+            <h2 class="section-heading">What the API provides</h2>
+
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-num">01</div>
+                    <h3>Natural Language Q&A</h3>
+                    <p>Ask questions in plain English. The RAG pipeline retrieves relevant filing sections and generates precise answers grounded in source documents.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-num">02</div>
+                    <h3>Citations from Source</h3>
+                    <p>Every answer includes citations referencing specific filing sections, dates, and document types. Verify any claim against the original SEC filing.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-num">03</div>
+                    <h3>25+ S&P 500 Companies</h3>
+                    <p>Pre-indexed coverage of major public companies including Apple, Microsoft, NVIDIA, Amazon, Tesla, JPMorgan, and more. Updated regularly.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-num">04</div>
+                    <h3>Simple REST API</h3>
+                    <p>Single endpoint. JSON in, JSON out. Bearer token authentication. No SDKs required. Works from any language, any platform.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><hr class="section-rule"></div>
+
+    <!-- Quick Start -->
+    <section id="quickstart">
+        <div class="container">
+            <div class="section-label">Quick Start</div>
+            <h2 class="section-heading">Two lines to your first query</h2>
+
+            <div class="code-tabs">
+                <button class="code-tab active" onclick="switchTab('curl')">cURL</button>
+                <button class="code-tab" onclick="switchTab('python')">Python</button>
+            </div>
+
+            <div class="code-panel active" id="panel-curl">
+                <div class="terminal">
+                    <div class="terminal-bar">
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-bar-label">cURL</span>
+                    </div>
+                    <div class="terminal-body">
+<pre><span class="cmd">$</span> curl -X POST https://api.edgarintel.com/v1/query \
+  -H <span class="str">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "question": "What are Microsoft biggest risk factors?",
+    "company": "MSFT",
+    "filing_type": "10-K"
+  }'</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-panel" id="panel-python">
+                <div class="terminal">
+                    <div class="terminal-bar">
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-dot"></span>
+                        <span class="terminal-bar-label">Python</span>
+                    </div>
+                    <div class="terminal-body">
+<pre><span class="key">import</span> requests
+
+response = requests.post(
+    <span class="str">"https://api.edgarintel.com/v1/query"</span>,
+    headers={<span class="str">"Authorization"</span>: <span class="str">"Bearer YOUR_API_KEY"</span>},
+    json={
+        <span class="str">"question"</span>: <span class="str">"What are Microsoft biggest risk factors?"</span>,
+        <span class="str">"company"</span>: <span class="str">"MSFT"</span>,
+    }
+)
+
+data = response.json()
+<span class="key">print</span>(data[<span class="str">"answer"</span>])
+
+<span class="key">for</span> cite <span class="key">in</span> data[<span class="str">"citations"</span>]:
+    <span class="key">print</span>(<span class="str">f"  [{cite['index']}] {cite['section']}"</span>)</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><hr class="section-rule"></div>
+
+    <!-- Endpoints -->
+    <section id="endpoints">
+        <div class="container">
+            <div class="section-label">Reference</div>
+            <h2 class="section-heading">API Endpoints</h2>
+
+            <table class="endpoints-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                        <th>Auth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method method-post">POST</span></td>
+                        <td><span class="endpoint-path">/v1/query</span></td>
+                        <td class="endpoint-desc">Ask a question about SEC filings</td>
+                        <td><span class="badge badge-auth">API Key</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="method method-get">GET</span></td>
+                        <td><span class="endpoint-path">/v1/companies</span></td>
+                        <td class="endpoint-desc">List all indexed companies</td>
+                        <td><span class="badge badge-public">Public</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="method method-get">GET</span></td>
+                        <td><span class="endpoint-path">/v1/usage</span></td>
+                        <td class="endpoint-desc">Check your daily API usage</td>
+                        <td><span class="badge badge-auth">API Key</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="method method-get">GET</span></td>
+                        <td><span class="endpoint-path">/v1/health</span></td>
+                        <td class="endpoint-desc">Service health check</td>
+                        <td><span class="badge badge-public">Public</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="container"><hr class="section-rule"></div>
+
+    <!-- Pricing -->
+    <section id="pricing">
+        <div class="container">
+            <div class="section-label">Pricing</div>
+            <h2 class="section-heading">Simple, transparent pricing</h2>
+
+            <div class="pricing-grid">
+                <div class="price-card">
+                    <div class="price-tier">Free</div>
+                    <div class="price-amount">$0</div>
+                    <div class="price-period">No credit card required</div>
+                    <ul class="price-features">
+                        <li>20 queries per day</li>
+                        <li>All indexed companies</li>
+                        <li>Full citation support</li>
+                        <li>Standard response time</li>
+                    </ul>
+                </div>
+                <div class="price-card featured">
+                    <div class="price-tier">Pro</div>
+                    <div class="price-amount">$29<span style="font-size: 1rem; color: var(--text-muted); font-family: var(--font-body);">/mo</span></div>
+                    <div class="price-period">For production applications</div>
+                    <ul class="price-features">
+                        <li>500 queries per day</li>
+                        <li>All indexed companies</li>
+                        <li>Full citation support</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <div class="coming-soon">Coming soon &mdash; join the waitlist</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><hr class="section-rule"></div>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Start building with SEC filing data</h2>
+            <p>Request an API key and make your first query in under a minute.</p>
+            <a href="mailto:amirhshad@gmail.com?subject=EDGAR%20Intelligence%20API%20Key%20Request&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20an%20API%20key%20for%20EDGAR%20Intelligence.%0A%0AName%3A%20%0AUse%20case%3A%20%0A%0AThanks" class="cta-button">Request API Key</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-tech">Built with ChromaDB, Claude, and OpenAI Embeddings</div>
+            <div class="footer-links">
+                <a href="https://github.com/amirhshad/edgar-intelligence" target="_blank">GitHub</a>
+                <a href="mailto:amirhshad@gmail.com">Contact</a>
+                <a href="/v1/health">Status</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`#panel-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

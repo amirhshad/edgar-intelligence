@@ -14,7 +14,10 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.parent
 DIRECTIVES_DIR = PROJECT_ROOT / "directives"
 EXECUTION_DIR = PROJECT_ROOT / "execution"
-TMP_DIR = PROJECT_ROOT / ".tmp"
+
+# On Render, use persistent disk; locally use .tmp/
+_render_data_dir = os.getenv("RENDER_DATA_DIR")
+TMP_DIR = Path(_render_data_dir) if _render_data_dir else PROJECT_ROOT / ".tmp"
 
 # Ensure .tmp exists
 TMP_DIR.mkdir(exist_ok=True)

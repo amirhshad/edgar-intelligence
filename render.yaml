@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: edgar-intelligence-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn execution.api_server:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RENDER_DATA_DIR
+        value: /data
+      - key: PYTHON_VERSION
+        value: 3.10.16
+    disk:
+      name: edgar-data
+      mountPath: /data
+      sizeGB: 1
