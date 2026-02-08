@@ -684,6 +684,44 @@ body {
     }
 }
 
+/* Demo Banner */
+.demo-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--accent-glow);
+    border: 1px solid var(--accent-dim);
+    border-radius: 100px;
+}
+
+.demo-badge {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--bg-primary);
+    background: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.demo-text {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+}
+
+.demo-text a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.demo-text a:hover {
+    text-decoration: underline;
+}
+
 /* Error State */
 .error-message {
     padding: var(--space-md) var(--space-lg);
