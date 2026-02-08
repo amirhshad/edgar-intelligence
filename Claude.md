@@ -54,9 +54,12 @@ Errors are learning opportunities. When something breaks:
 - **Intermediates**: Temporary files needed during processing
 
 **Directory structure:**
-- `.tmp/` - All intermediate files (dossiers, scraped data, temp exports). Never commit, always regenerated.
+- `.tmp/` - All intermediate files (vector DB, parsed filings, embeddings cache). Never commit, always regenerated.
 - `execution/` - Python scripts (the deterministic tools)
 - `directives/` - SOPs in Markdown (the instruction set)
+- `api_landing/` - Static landing page served at `/`
+- `ui/` - Chat UI served at `/app`
+- `docs/` - GitHub Pages demo (static copy of `ui/`)
 - `.env` - Environment variables and API keys
 - `credentials.json`, `token.json` - Google OAuth credentials (required files, in `.gitignore`)
 
@@ -87,10 +90,87 @@ The system supports event-driven execution via Modal webhooks. Each webhook maps
 
 **All webhook activity streams to Slack in real-time.**
 
+## EDGAR Intelligence API
+
+This project is a Developer API for querying SEC filings using RAG (Retrieval-Augmented Generation). It's deployed on Render and the code lives on GitHub.
+
+**GitHub:** https://github.com/amirhshad/edgar-intelligence
+**GitHub Pages demo:** https://amirhshad.github.io/edgar-intelligence/
+
+### Architecture
+
+```
+User → POST /v1/query + API key → Flask API → RAG pipeline → ChromaDB → Claude LLM → Cited answer
+```
+
+### Key execution scripts
+
+| Script | Purpose |
+|--------|---------|
+| `execution/api_server.py` | Flask API server (landing page, chat UI, v1 API) |
+| `execution/api_db.py` | SQLite database for API keys + usage tracking |
+| `execution/api_auth.py` | `@require_api_key` decorator (auth + rate limiting) |
+| `execution/api_keys_cli.py` | CLI to create/list/revoke API keys |
+| `execution/add_company.py` | Index a company's SEC filing into ChromaDB |
+| `execution/rag_chain.py` | RAG pipeline (embed query → retrieve chunks → LLM answer) |
+| `execution/vector_store.py` | ChromaDB operations (add, query, stats) |
+| `execution/sec_fetcher.py` | Download filings from SEC EDGAR |
+| `execution/pdf_parser.py` | Parse SEC filing HTML into sections |
+| `execution/chunker.py` | Split sections into chunks for embedding |
+| `execution/embeddings.py` | OpenAI text-embedding-3-small (cached) |
+
+### API endpoints
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /` | No | Landing page |
+| `GET /app` | No | Chat UI |
+| `POST /v1/query` | Bearer token | Ask questions, get cited answers |
+| `GET /v1/companies` | No | List indexed companies |
+| `GET /v1/usage` | Bearer token | Check rate limit status |
+| `GET /v1/health` | No | Health check |
+
+### API key management
+
+```bash
+python execution/api_keys_cli.py create --name "Name" --email "email" --tier free
+python execution/api_keys_cli.py list
+python execution/api_keys_cli.py revoke --id 1
+python execution/api_keys_cli.py usage --id 1
+```
+
+Key format: `sk_edgar_live_` + 24 hex chars. Only SHA-256 hash stored in SQLite.
+Rate limits: free = 20 queries/day, pro = 500 queries/day.
+
+### Adding companies
+
+```bash
+python execution/add_company.py AAPL        # Add Apple's latest 10-K
+python execution/add_company.py TSLA 10-Q   # Add Tesla's latest 10-Q
+```
+
+Currently indexed: 26 S&P 500 companies, 7,122 chunks.
+
+### Databases
+
+- **ChromaDB** (`.tmp/chroma/`) — Vector database for SEC filing chunks + embeddings
+- **SQLite** (`.tmp/edgar_api.db`) — API keys, daily usage counters, request audit log
+
+### Deployment
+
+- **Platform:** Render (web service + persistent disk)
+- **Config:** `Procfile`, `render.yaml`, `runtime.txt`
+- **Persistent disk** mounts at `/data` (set via `RENDER_DATA_DIR` env var)
+- **Start command:** `gunicorn execution.api_server:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+
+### MCP servers available
+
+- **Render** — Manage Render services, deploys, logs, env vars directly from Claude Code
+- **Supabase** — Database operations (if needed in future)
+- **Playwright** — Browser automation for testing
+
 ## Summary
 
 You sit between human intent (directives) and deterministic execution (Python scripts). Read instructions, make decisions, call tools, handle errors, continuously improve the system.
 
 Be pragmatic. Be reliable. Self-anneal.
-
-Also, use Opus-4.5 for everything while building. It came out a few days ago and is an order of magnitude better than Sonnet and other models. If you can't find it, look it up first.

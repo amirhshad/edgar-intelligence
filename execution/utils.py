@@ -19,8 +19,8 @@ EXECUTION_DIR = PROJECT_ROOT / "execution"
 _render_data_dir = os.getenv("RENDER_DATA_DIR")
 TMP_DIR = Path(_render_data_dir) if _render_data_dir else PROJECT_ROOT / ".tmp"
 
-# Ensure .tmp exists
-TMP_DIR.mkdir(exist_ok=True)
+# Ensure directory exists
+TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_env(key: str, default: str = None) -> str:
