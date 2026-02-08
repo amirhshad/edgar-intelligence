@@ -2,6 +2,7 @@
 EDGAR Intelligence API Server.
 
 v1 API endpoints:
+    POST /v1/signup     - Self-serve API key creation (public)
     POST /v1/query      - Ask questions about SEC filings (requires API key)
     GET  /v1/companies  - List indexed companies (public)
     GET  /v1/usage      - Check API usage (requires API key)
@@ -32,7 +33,7 @@ from flask_cors import CORS
 from vector_store import get_collection_stats, get_all_tickers
 from rag_chain import query_with_context as rag_query
 from api_auth import require_api_key
-from api_db import init_db, increment_usage, log_request, get_daily_usage, get_key_limit
+from api_db import init_db, increment_usage, log_request, get_daily_usage, get_key_limit, create_key, get_keys_by_email, TIER_LIMITS
 
 app = Flask(__name__, static_folder='../api_landing', static_url_path='/static')
 CORS(app)
@@ -225,6 +226,44 @@ def v1_usage():
         "key_prefix": key["key_prefix"],
         "member_since": key["created_at"][:10],
     })
+
+
+# ──────────────── Signup ────────────────
+
+MAX_KEYS_PER_EMAIL = 3
+
+@app.route('/v1/signup', methods=['POST'])
+def v1_signup():
+    """Self-serve API key signup. Returns a free-tier key instantly."""
+    data = request.get_json()
+    if not data:
+        return _error("bad_request", "Request body must be JSON", 400)
+
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+
+    if not name:
+        return _error("bad_request", "Name is required", 400)
+    if not email or "@" not in email or "." not in email.split("@")[-1]:
+        return _error("bad_request", "A valid email address is required", 400)
+
+    # Limit keys per email to prevent abuse
+    existing = get_keys_by_email(email)
+    if len(existing) >= MAX_KEYS_PER_EMAIL:
+        return _error("rate_limit_exceeded", f"Maximum {MAX_KEYS_PER_EMAIL} API keys per email address", 429)
+
+    try:
+        api_key = create_key(name, email, "free")
+        return jsonify({
+            "api_key": api_key,
+            "name": name,
+            "email": email,
+            "tier": "free",
+            "queries_per_day": TIER_LIMITS["free"],
+            "message": "Save this key — it will not be shown again.",
+        }), 201
+    except Exception as e:
+        return _error("internal_error", f"Could not create API key: {str(e)}", 500)
 
 
 # ──────────────── Main ────────────────

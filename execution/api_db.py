@@ -151,6 +151,16 @@ def list_keys() -> list[dict]:
         return [dict(row) for row in rows]
 
 
+def get_keys_by_email(email: str) -> list[dict]:
+    """Get all active API keys for an email address."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, key_prefix, name, email, tier, created_at FROM api_keys WHERE email = ? AND is_active = 1",
+            (email,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
 # --- Usage Tracking ---
 
 def get_daily_usage(key_id: int, date_str: str = None) -> int:

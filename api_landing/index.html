@@ -669,6 +669,198 @@
             color: var(--text-muted);
             margin-bottom: 8px;
         }
+
+        /* ─── SIGNUP MODAL ─── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 440px;
+            margin: 20px;
+            position: relative;
+            animation: fadeUp 300ms forwards;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 28px 0;
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            font-size: 1.25rem;
+            line-height: 1;
+            transition: color 200ms;
+        }
+
+        .modal-close:hover { color: var(--text); }
+
+        .modal-body { padding: 24px 28px 28px; }
+
+        .modal-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.9375rem;
+            outline: none;
+            transition: border-color 200ms;
+        }
+
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-input:focus { border-color: var(--accent-dim); }
+
+        .form-submit {
+            width: 100%;
+            margin-top: 8px;
+            padding: 12px 24px;
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--bg);
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 200ms;
+        }
+
+        .form-submit:hover {
+            background: var(--accent-dim);
+            transform: translateY(-1px);
+        }
+
+        .form-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-error {
+            font-size: 0.8125rem;
+            color: var(--red);
+            margin-top: 12px;
+            display: none;
+        }
+
+        .form-error.visible { display: block; }
+
+        /* Success state */
+        .signup-success { display: none; }
+        .signup-success.visible { display: block; }
+        .signup-form.hidden { display: none; }
+
+        .key-display {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .key-value {
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            color: var(--accent);
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .key-copy {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 200ms;
+        }
+
+        .key-copy:hover {
+            border-color: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        .key-warning {
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+
+        .key-details {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .key-details strong {
+            color: var(--text);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -690,7 +882,7 @@
                 <a href="#quickstart">Docs</a>
                 <a href="#pricing">Pricing</a>
                 <a href="https://github.com/amirhshad/edgar-intelligence" target="_blank">GitHub</a>
-                <a href="mailto:amirhshad@gmail.com" class="nav-cta">Get API Key</a>
+                <a href="#" onclick="openSignup(); return false;" class="nav-cta">Get API Key</a>
             </div>
         </div>
     </nav>
@@ -863,6 +1055,12 @@ data = response.json()
                         <td><span class="badge badge-auth">API Key</span></td>
                     </tr>
                     <tr>
+                        <td><span class="method method-post">POST</span></td>
+                        <td><span class="endpoint-path">/v1/signup</span></td>
+                        <td class="endpoint-desc">Create a free API key</td>
+                        <td><span class="badge badge-public">Public</span></td>
+                    </tr>
+                    <tr>
                         <td><span class="method method-get">GET</span></td>
                         <td><span class="endpoint-path">/v1/health</span></td>
                         <td class="endpoint-desc">Service health check</td>
@@ -916,7 +1114,7 @@ data = response.json()
         <div class="container">
             <h2>Start building with SEC filing data</h2>
             <p>Request an API key and make your first query in under a minute.</p>
-            <a href="mailto:amirhshad@gmail.com?subject=EDGAR%20Intelligence%20API%20Key%20Request&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20an%20API%20key%20for%20EDGAR%20Intelligence.%0A%0AName%3A%20%0AUse%20case%3A%20%0A%0AThanks" class="cta-button">Request API Key</a>
+            <a href="#" onclick="openSignup(); return false;" class="cta-button">Get API Key</a>
         </div>
     </section>
 
@@ -932,6 +1130,46 @@ data = response.json()
         </div>
     </footer>
 
+    <!-- Signup Modal -->
+    <div class="modal-overlay" id="signupModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Get your API key</span>
+                <button class="modal-close" onclick="closeSignup()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Form state -->
+                <div class="signup-form" id="signupForm">
+                    <p class="modal-subtitle">Create a free API key instantly. No credit card required.</p>
+                    <div class="form-group">
+                        <label class="form-label" for="signupName">Name</label>
+                        <input class="form-input" type="text" id="signupName" placeholder="Jane Smith" autocomplete="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="signupEmail">Email</label>
+                        <input class="form-input" type="email" id="signupEmail" placeholder="jane@company.com" autocomplete="email" required>
+                    </div>
+                    <button class="form-submit" id="signupSubmit" onclick="submitSignup()">Generate API Key</button>
+                    <div class="form-error" id="signupError"></div>
+                </div>
+
+                <!-- Success state -->
+                <div class="signup-success" id="signupSuccess">
+                    <div class="key-warning">Save this key — it will not be shown again</div>
+                    <div class="key-display">
+                        <span class="key-value" id="signupKeyValue"></span>
+                        <button class="key-copy" onclick="copyKey()">Copy</button>
+                    </div>
+                    <div class="key-details">
+                        <strong>Tier:</strong> Free<br>
+                        <strong>Limit:</strong> 20 queries per day<br>
+                        <strong>Auth:</strong> Pass as <code style="font-family: var(--font-mono); color: var(--accent); font-size: 0.8125rem;">Authorization: Bearer YOUR_KEY</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchTab(tab) {
             document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
@@ -939,6 +1177,100 @@ data = response.json()
             document.querySelector(`#panel-${tab}`).classList.add('active');
             event.target.classList.add('active');
         }
+
+        // Signup modal
+        function openSignup() {
+            document.getElementById('signupModal').classList.add('active');
+            document.getElementById('signupName').focus();
+        }
+
+        function closeSignup() {
+            const modal = document.getElementById('signupModal');
+            modal.classList.remove('active');
+            // Reset to form state after close
+            setTimeout(() => {
+                document.getElementById('signupForm').classList.remove('hidden');
+                document.getElementById('signupSuccess').classList.remove('visible');
+                document.getElementById('signupError').classList.remove('visible');
+                document.getElementById('signupName').value = '';
+                document.getElementById('signupEmail').value = '';
+                document.getElementById('signupSubmit').disabled = false;
+                document.getElementById('signupSubmit').textContent = 'Generate API Key';
+            }, 300);
+        }
+
+        // Close on overlay click
+        document.getElementById('signupModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSignup();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSignup();
+        });
+
+        async function submitSignup() {
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const btn = document.getElementById('signupSubmit');
+            const errorEl = document.getElementById('signupError');
+
+            errorEl.classList.remove('visible');
+
+            if (!name || !email) {
+                errorEl.textContent = 'Both fields are required.';
+                errorEl.classList.add('visible');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const res = await fetch('/v1/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errorEl.textContent = data.error?.message || 'Something went wrong.';
+                    errorEl.classList.add('visible');
+                    btn.disabled = false;
+                    btn.textContent = 'Generate API Key';
+                    return;
+                }
+
+                // Show success
+                document.getElementById('signupKeyValue').textContent = data.api_key;
+                document.getElementById('signupForm').classList.add('hidden');
+                document.getElementById('signupSuccess').classList.add('visible');
+            } catch (err) {
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.classList.add('visible');
+                btn.disabled = false;
+                btn.textContent = 'Generate API Key';
+            }
+        }
+
+        function copyKey() {
+            const key = document.getElementById('signupKeyValue').textContent;
+            navigator.clipboard.writeText(key).then(() => {
+                const btn = document.querySelector('.key-copy');
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+            });
+        }
+
+        // Allow Enter to submit
+        document.getElementById('signupEmail').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') submitSignup();
+        });
+        document.getElementById('signupName').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('signupEmail').focus();
+        });
     </script>
 </body>
 </html>
