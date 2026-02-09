@@ -19,7 +19,7 @@ from utils import TMP_DIR
 DB_PATH = TMP_DIR / "edgar_api.db"
 
 TIER_LIMITS = {
-    "free": 20,
+    "free": 5,
     "pro": 500,
 }
 

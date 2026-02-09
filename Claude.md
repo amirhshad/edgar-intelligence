@@ -140,7 +140,7 @@ python execution/api_keys_cli.py usage --id 1
 ```
 
 Key format: `sk_edgar_live_` + 24 hex chars. Only SHA-256 hash stored in SQLite.
-Rate limits: free = 20 queries/day, pro = 500 queries/day.
+Rate limits: free = 5 queries/day, pro = 500 queries/day.
 
 ### Adding companies
 
